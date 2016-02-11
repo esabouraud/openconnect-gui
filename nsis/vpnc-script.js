@@ -49,10 +49,13 @@ function getDefaultGateway()
 
 function getInterfaceId(ifname)
 {
-	var rx_ifid = new RegExp("^ *([0-9]+) *.*" + ifname + "$", "m")
-	if (exec("netsh interface ip show interfaces").search(rx_ifid)) {
+	var rx_ifname_sanitizer = new RegExp("[^\\d\\w ]");
+	var ifname_sanitized = ifname.replace(rx_ifname_sanitizer, ".", "g");
+	var rx_ifid = new RegExp("^ *([0-9]+) *.*" + ifname_sanitized + "$", "m");
+	if (exec("netsh interface ip show interfaces").search(rx_ifid) != -1) {
 		return (RegExp.$1);
 	}
+	echo("interface \"" + ifname + "\" not found");
 	return ("");
 }
 
@@ -100,11 +103,12 @@ case "connect":
 	var internal_gw = internal_gw_array.join(".");
 	var tundevid = getInterfaceId(env("TUNDEV"))
 	
-	echo("VPN Gateway: " + env("VPNGATEWAY"));
+	echo("VPN Gateway     : " + env("VPNGATEWAY"));
 	echo("Internal Address: " + env("INTERNAL_IP4_ADDRESS"));
 	echo("Internal Netmask: " + env("INTERNAL_IP4_NETMASK"));
 	echo("Internal Gateway: " + internal_gw);
-	echo("Interface: \"" + tundevid + "\"");
+	echo("Interface name  : \"" + env("TUNDEV") + "\"");
+	echo("Interface id    : " + tundevid);
 
 	// Add direct route for the VPN gateway to avoid routing loops
 	exec("route add " + env("VPNGATEWAY") +
